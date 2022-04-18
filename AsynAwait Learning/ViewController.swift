@@ -40,11 +40,17 @@ class ViewController: UIViewController, UITableViewDataSource {
         
         // async style
         Task {
-            let users = await fetchUsers()
-            self.users = users
-            DispatchQueue.main.async {
-                self.tableView.reloadData()
+            let result = await fetchUsers()
+            switch result {
+            case .success(let users):
+                self.users = users
+                DispatchQueue.main.async {
+                    self.tableView.reloadData()
+                }
+            case .failure(let err):
+                print(err)
             }
+            
         }
         
     }
@@ -64,20 +70,25 @@ class ViewController: UIViewController, UITableViewDataSource {
         
     }
     
+
     // implementation with actual async
-    func fetchUsers() async -> [User] {
+    func fetchUsers() async -> Result<[User], Error> {
 
         guard let url = url else {
-            return []
+            return .failure(MyError.failedToGetUser)
         }
         
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let users = try JSONDecoder().decode([User].self, from: data)
-            return users
+            return .success(users)
         } catch {
-            return []
+            return .failure(MyError.failedToGetUser)
         }
+    }
+    
+    enum MyError: Error {
+        case failedToGetUser
     }
 }
 
